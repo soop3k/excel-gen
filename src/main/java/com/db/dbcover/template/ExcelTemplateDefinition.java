@@ -109,8 +109,11 @@ public class ExcelTemplateDefinition {
 
         public String resolvedFormat() {
             String explicit = this.format;
-            if (explicit != null && !explicit.isBlank()) {
-                return explicit;
+            if (explicit != null) {
+                String trimmed = explicit.trim();
+                if (!trimmed.isEmpty()) {
+                    return trimmed;
+                }
             }
             return resolvedType().defaultFormat();
         }

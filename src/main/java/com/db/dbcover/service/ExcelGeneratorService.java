@@ -121,7 +121,11 @@ public class ExcelGeneratorService {
                                    DataFormat dataFormat,
                                    Map<String, CellStyle> formatStyles) {
         String format = column.resolvedFormat();
-        CellStyle style = formatStyles.computeIfAbsent(format, key -> {
+        if (format == null || format.isBlank()) {
+            format = ColumnType.TEXT.defaultFormat();
+        }
+        String normalizedFormat = format.trim();
+        CellStyle style = formatStyles.computeIfAbsent(normalizedFormat, key -> {
             CellStyle newStyle = workbook.createCellStyle();
             newStyle.setDataFormat(dataFormat.getFormat(key));
             return newStyle;

@@ -3,44 +3,44 @@ excel:
     template-sheets:
       - name: INSTRUMENT_DETAILS
         columns:
-          - { header: INSTRUMENT_ID, type: STRING, required: true, description: "Unique instrument identifier" }
-          - { header: INSTRUMENT_NAME, type: STRING, required: true, description: "Instrument name" }
+          - { header: INSTRUMENT_ID, type: TEXT, required: true, description: "Unique instrument identifier" }
+          - { header: INSTRUMENT_NAME, type: TEXT, required: true, description: "Instrument name" }
           - { header: CURRENCY, type: LIST, required: true, description: "ISO 4217 currency code", allowed-values: [PLN, EUR, USD] }
           - { header: ISSUE_DATE, type: DATE, required: false, description: "Issue date", format: dd/mm/yyyy }
       - name: LINKED_DEALS
         columns:
-          - { header: DEAL_ID, type: STRING, required: true }
+          - { header: DEAL_ID, type: TEXT, required: true }
           - { header: DEAL_TYPE, type: LIST, required: true, description: "Deal type (e.g. PRIMARY, SECONDARY)", allowed-values: [PRIMARY, SECONDARY, TERTIARY] }
           - { header: DEAL_DATE, type: DATE, required: true, format: dd.mm.yyyy, tooltip: "Select the deal date in dd.mm.yyyy format" }
           - { header: NOTIONAL, type: NUMBER, required: true, description: "Notional amount", tooltip: "Provide the notional amount in the deal currency" }
-      - name: LINKDE_ASSETS
+      - name: LINKED_ASSETS
         columns:
-          - { header: ASSET_ID, type: STRING, required: true }
-          - { header: ASSET_CLASS, type: STRING, required: true }
+          - { header: ASSET_ID, type: TEXT, required: true }
+          - { header: ASSET_CLASS, type: TEXT, required: true }
           - { header: ASSET_VALUE, type: NUMBER, required: false }
       - name: PERSISTED_IDS
         columns:
-          - { header: ENTITY_TYPE, type: STRING, required: true }
-          - { header: LEGACY_ID, type: STRING, required: true }
-          - { header: SOURCE_SYSTEM, type: STRING, required: false }
-      - name: LINKDE_INSTRUMENTS
+          - { header: ENTITY_TYPE, type: TEXT, required: true }
+          - { header: LEGACY_ID, type: TEXT, required: true }
+          - { header: SOURCE_SYSTEM, type: TEXT, required: false }
+      - name: LINKED_INSTRUMENTS
         columns:
-          - { header: MASTER_INSTRUMENT_ID, type: STRING, required: true }
-          - { header: RELATED_INSTRUMENT_ID, type: STRING, required: true }
-          - { header: RELATIONSHIP_TYPE, type: STRING, required: true }
+          - { header: MASTER_INSTRUMENT_ID, type: TEXT, required: true }
+          - { header: RELATED_INSTRUMENT_ID, type: TEXT, required: true }
+          - { header: RELATIONSHIP_TYPE, type: TEXT, required: true }
       - name: LINKED_PARTIES
         columns:
-          - { header: PARTY_ID, type: STRING, required: true }
-          - { header: PARTY_ROLE, type: STRING, required: true, description: "Role (e.g. ISSUER, GUARANTOR)" }
-          - { header: PARTY_NAME, type: STRING, required: true }
-          - { header: COUNTRY, type: STRING, required: false }
+          - { header: PARTY_ID, type: TEXT, required: true }
+          - { header: PARTY_ROLE, type: TEXT, required: true, description: "Role (e.g. ISSUER, GUARANTOR)" }
+          - { header: PARTY_NAME, type: TEXT, required: true }
+          - { header: COUNTRY, type: TEXT, required: false }
 
     instrument-templates:
       MORTGAGE:
         sheets:
           - INSTRUMENT_DETAILS
           - LINKED_DEALS
-          - LINKDE_ASSETS
+          - LINKED_ASSETS
           - PERSISTED_IDS
-          - LINKDE_INSTRUMENTS
+          - LINKED_INSTRUMENTS
           - LINKED_PARTIES

@@ -29,7 +29,7 @@ public final class DefaultExcelTemplates {
                 numberColumn("NOTIONAL", true, "Notional amount", null, "Provide the notional amount in the deal currency")
         );
 
-        TemplateSheet linkedAssets = sheet("LINKDE_ASSETS",
+        TemplateSheet linkedAssets = sheet("LINKED_ASSETS",
                 textColumn("ASSET_ID", true, null),
                 textColumn("ASSET_CLASS", true, null),
                 numberColumn("ASSET_VALUE", false, null)
@@ -41,7 +41,7 @@ public final class DefaultExcelTemplates {
                 textColumn("SOURCE_SYSTEM", false, null)
         );
 
-        TemplateSheet linkedInstruments = sheet("LINKDE_INSTRUMENTS",
+        TemplateSheet linkedInstruments = sheet("LINKED_INSTRUMENTS",
                 textColumn("MASTER_INSTRUMENT_ID", true, null),
                 textColumn("RELATED_INSTRUMENT_ID", true, null),
                 textColumn("RELATIONSHIP_TYPE", true, null)
@@ -67,9 +67,9 @@ public final class DefaultExcelTemplates {
                         "MORTGAGE", settings(List.of(
                                 "INSTRUMENT_DETAILS",
                                 "LINKED_DEALS",
-                                "LINKDE_ASSETS",
+                                "LINKED_ASSETS",
                                 "PERSISTED_IDS",
-                                "LINKDE_INSTRUMENTS",
+                                "LINKED_INSTRUMENTS",
                                 "LINKED_PARTIES"
                         ))
                 ))
