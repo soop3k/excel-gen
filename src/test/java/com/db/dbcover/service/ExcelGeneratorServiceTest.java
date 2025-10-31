@@ -47,6 +47,7 @@ class ExcelGeneratorServiceTest {
         byte[] workbookBytes = service.generateTemplate(definition);
 
         try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(workbookBytes))) {
+            org.apache.poi.ss.usermodel.DataFormat dataFormat = workbook.createDataFormat();
             for (TemplateSheet sheetDefinition : definition.getSheets()) {
                 Sheet sheet = workbook.getSheet(sheetDefinition.getName());
                 assertThat(sheet).as("sheet %s", sheetDefinition.getName()).isNotNull();
@@ -75,7 +76,8 @@ class ExcelGeneratorServiceTest {
 
                     CellStyle columnStyle = sheet.getColumnStyle(columnIndex);
                     assertThat(columnStyle).as("style for %s", column.getHeader()).isNotNull();
-                    assertThat(columnStyle.getDataFormatString()).isEqualTo(column.resolvedFormat());
+                    short expectedFormatIndex = dataFormat.getFormat(column.resolvedFormat());
+                    assertThat(columnStyle.getDataFormat()).isEqualTo(expectedFormatIndex);
                 }
 
                 PaneInformation paneInformation = sheet.getPaneInformation();
