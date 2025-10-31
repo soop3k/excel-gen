@@ -65,21 +65,15 @@ public final class TemplateSheetResolver {
         }
 
         LinkedHashMap<String, ExcelTemplateDefinition.Column> columns = new LinkedHashMap<>();
-        List<String> bases = sheet.getBaseSheets();
-        if (bases != null) {
-            for (String baseName : bases) {
-                TemplateSheet base = resolveSheet(baseName, source, resolved, stack);
-                for (ExcelTemplateDefinition.Column column : base.getColumns()) {
-                    columns.put(column.getHeader(), column);
-                }
+        for (String baseName : sheet.getBaseSheets()) {
+            TemplateSheet base = resolveSheet(baseName, source, resolved, stack);
+            for (ExcelTemplateDefinition.Column column : base.getColumns()) {
+                columns.put(column.getHeader(), column);
             }
         }
 
-        List<ExcelTemplateDefinition.Column> current = sheet.getColumns();
-        if (current != null) {
-            for (ExcelTemplateDefinition.Column column : current) {
-                columns.put(column.getHeader(), column);
-            }
+        for (ExcelTemplateDefinition.Column column : sheet.getColumns()) {
+            columns.put(column.getHeader(), column);
         }
 
         TemplateSheet merged = TemplateSheet.builder()
@@ -126,18 +120,12 @@ public final class TemplateSheetResolver {
         stack.push(name);
 
         List<String> mergedSheets = new ArrayList<>();
-        List<String> baseTemplates = template.getBaseTemplates();
-        if (baseTemplates != null) {
-            for (String baseName : baseTemplates) {
-                ExcelTemplateDefinition.TemplateSettings base = resolveInstrumentTemplate(baseName, source, resolved, stack);
-                mergedSheets.addAll(base.getSheets());
-            }
+        for (String baseName : template.getBaseTemplates()) {
+            ExcelTemplateDefinition.TemplateSettings base = resolveInstrumentTemplate(baseName, source, resolved, stack);
+            mergedSheets.addAll(base.getSheets());
         }
 
-        List<String> sheets = template.getSheets();
-        if (sheets != null) {
-            mergedSheets.addAll(sheets);
-        }
+        mergedSheets.addAll(template.getSheets());
 
         LinkedHashSet<String> order = new LinkedHashSet<>(mergedSheets);
         ExcelTemplateDefinition.TemplateSettings merged = new ExcelTemplateDefinition.TemplateSettings();
