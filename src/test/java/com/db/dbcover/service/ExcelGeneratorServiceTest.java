@@ -11,23 +11,31 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Comment;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.PaneInformation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ExcelGeneratorServiceTest {
 
@@ -139,6 +147,64 @@ class ExcelGeneratorServiceTest {
         assertThatThrownBy(() -> service.generateTemplate("UNKNOWN"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unknown instrument type");
+    }
+
+    @Test
+    @DisplayName("creates validations for constrained columns")
+    void shouldDelegateValidationCreation() throws Exception {
+        Method method = ExcelGeneratorService.class.getDeclaredMethod(
+                "applyColumnValidation",
+                Sheet.class,
+                DataValidationHelper.class,
+                int.class,
+                Column.class
+        );
+        method.setAccessible(true);
+
+        Sheet sheet = mock(Sheet.class);
+        DataValidationHelper helper = mock(DataValidationHelper.class);
+        DataValidationConstraint constraint = mock(DataValidationConstraint.class);
+        DataValidation validation = mock(DataValidation.class);
+        when(helper.createExplicitListConstraint(any(String[].class))).thenReturn(constraint);
+        when(helper.createValidation(eq(constraint), any(CellRangeAddressList.class))).thenReturn(validation);
+
+        Column listColumn = Column.builder()
+                .header("CHOICE")
+                .type(ColumnType.LIST)
+                .build();
+        listColumn.setAllowedValues(List.of("A", "B"));
+
+        method.invoke(service, sheet, helper, 0, listColumn);
+
+        verify(helper).createExplicitListConstraint(any(String[].class));
+        verify(helper).createValidation(eq(constraint), any(CellRangeAddressList.class));
+        verify(sheet).addValidationData(validation);
+    }
+
+    @Test
+    @DisplayName("skips validation when column type has no constraints")
+    void shouldSkipValidationForUnconstrainedTypes() throws Exception {
+        Method method = ExcelGeneratorService.class.getDeclaredMethod(
+                "applyColumnValidation",
+                Sheet.class,
+                DataValidationHelper.class,
+                int.class,
+                Column.class
+        );
+        method.setAccessible(true);
+
+        Sheet sheet = mock(Sheet.class);
+        DataValidationHelper helper = mock(DataValidationHelper.class);
+
+        Column textColumn = Column.builder()
+                .header("FREE_TEXT")
+                .type(ColumnType.TEXT)
+                .build();
+
+        method.invoke(service, sheet, helper, 0, textColumn);
+
+        verify(helper, never()).createValidation(any(), any());
+        verify(sheet, never()).addValidationData(any());
     }
 
     private static Column column(String header,
