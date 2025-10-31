@@ -3,7 +3,6 @@ package com.db.dbcover.service;
 import com.db.dbcover.config.ExcelTemplateProperties;
 import com.db.dbcover.template.ExcelTemplateDefinition;
 import com.db.dbcover.template.ExcelTemplateDefinition.Column;
-import com.db.dbcover.template.ExcelTemplateDefinition.ColumnType;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSheet;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
@@ -28,11 +27,13 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.StringJoiner;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -92,7 +93,7 @@ public class ExcelGeneratorService {
         org.apache.poi.ss.usermodel.Drawing<?> drawing = sheet.createDrawingPatriarch();
 
         int columnIndex = 0;
-        for (Column column : new ArrayList<>(sheetDefinition.getColumns())) {
+        for (Column column : sheetDefinition.getColumns()) {
             Cell headerCell = headerRow.createCell(columnIndex);
             headerCell.setCellValue(column.getHeader());
             headerCell.setCellStyle(column.isRequired() ? requiredHeaderStyle : headerStyle);
@@ -120,11 +121,7 @@ public class ExcelGeneratorService {
                                    Workbook workbook,
                                    DataFormat dataFormat,
                                    Map<String, CellStyle> formatStyles) {
-        String format = column.resolvedFormat();
-        if (format == null || format.isBlank()) {
-            format = ColumnType.TEXT.defaultFormat();
-        }
-        String normalizedFormat = format.trim();
+        String normalizedFormat = column.resolvedFormat().trim();
         CellStyle style = formatStyles.computeIfAbsent(normalizedFormat, key -> {
             CellStyle newStyle = workbook.createCellStyle();
             newStyle.setDataFormat(dataFormat.getFormat(key));
@@ -181,10 +178,6 @@ public class ExcelGeneratorService {
                                     Cell headerCell,
                                     Column column) {
         String tooltip = resolveColumnTooltip(column);
-        if (tooltip == null || tooltip.isBlank()) {
-            return;
-        }
-
         ClientAnchor anchor = creationHelper.createClientAnchor();
         anchor.setCol1(columnIndex);
         anchor.setCol2(columnIndex + 2);
@@ -197,28 +190,26 @@ public class ExcelGeneratorService {
     }
 
     private String buildInfoCellValue(Column column) {
-        StringJoiner joiner = new StringJoiner(" | ");
-        joiner.add("type: " + column.typeLabel());
-        joiner.add("required: " + (column.isRequired() ? "yes" : "no"));
-        if (column.getDescription() != null && !column.getDescription().isBlank()) {
-            joiner.add(column.getDescription());
-        }
+        String description = Optional.ofNullable(column.getDescription())
+                .filter(ExcelGeneratorService::hasText)
+                .orElse(null);
         List<String> allowedValues = column.resolvedAllowedValues();
-        if (!allowedValues.isEmpty()) {
-            joiner.add("allowed: " + allowedValues);
-        }
-        String format = column.resolvedFormat();
-        if (format != null && !format.isBlank()) {
-            joiner.add("format: " + format);
-        }
-        return joiner.toString();
+
+        return Stream.of(
+                        "type: " + column.typeLabel(),
+                        "required: " + (column.isRequired() ? "yes" : "no"),
+                        description,
+                        allowedValues.isEmpty() ? null : "allowed: " + allowedValues,
+                        "format: " + column.resolvedFormat()
+                )
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining(" | "));
     }
 
     private String resolveColumnTooltip(Column column) {
-        if (column.getTooltip() != null && !column.getTooltip().isBlank()) {
-            return column.getTooltip();
-        }
-        return buildInfoCellValue(column);
+        return Optional.ofNullable(column.getTooltip())
+                .filter(ExcelGeneratorService::hasText)
+                .orElseGet(() -> buildInfoCellValue(column));
     }
 
     private CellStyle createHeaderStyle(Workbook workbook, boolean required) {
@@ -231,5 +222,9 @@ public class ExcelGeneratorService {
         font.setColor(required ? REQUIRED_HEADER_FONT_COLOR : OPTIONAL_HEADER_FONT_COLOR);
         style.setFont(font);
         return style;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

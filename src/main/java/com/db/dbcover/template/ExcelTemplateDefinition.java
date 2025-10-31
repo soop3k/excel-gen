@@ -7,7 +7,9 @@ import lombok.Setter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Getter
 public class ExcelTemplateDefinition {
@@ -19,30 +21,21 @@ public class ExcelTemplateDefinition {
     }
 
     public void setSheets(List<TemplateSheet> sheets) {
-        this.sheets = sheets == null ? new ArrayList<>() : new ArrayList<>(sheets);
+        this.sheets = new ArrayList<>(Optional.ofNullable(sheets).orElseGet(List::of));
     }
 
     public static ExcelTemplateDefinition fromSettings(TemplateSettings settings,
                                                        java.util.Map<String, TemplateSheet> sheetIndex) {
-        if (settings == null) {
-            throw new IllegalArgumentException("settings must not be null");
-        }
-        if (sheetIndex == null) {
-            throw new IllegalArgumentException("sheetIndex must not be null");
-        }
+        Objects.requireNonNull(settings, "settings must not be null");
+        Objects.requireNonNull(sheetIndex, "sheetIndex must not be null");
 
         ExcelTemplateDefinition definition = new ExcelTemplateDefinition();
-        List<TemplateSheet> resolvedSheets = new ArrayList<>();
-        List<String> sheetNames = settings.getSheets();
-        if (sheetNames != null) {
-            for (String sheetName : sheetNames) {
-                TemplateSheet templateSheet = sheetIndex.get(sheetName);
-                if (templateSheet == null) {
-                    throw new IllegalArgumentException("Unknown template sheet: " + sheetName);
-                }
-                resolvedSheets.add(templateSheet);
-            }
-        }
+        List<TemplateSheet> resolvedSheets = Optional.ofNullable(settings.getSheets())
+                .orElseGet(List::of)
+                .stream()
+                .map(sheetName -> Optional.ofNullable(sheetIndex.get(sheetName))
+                        .orElseThrow(() -> new IllegalArgumentException("Unknown template sheet: " + sheetName)))
+                .toList();
         definition.setSheets(resolvedSheets);
         return definition;
     }
@@ -66,12 +59,15 @@ public class ExcelTemplateDefinition {
         }
 
         public void setBaseSheets(List<String> baseSheets) {
-            this.baseSheets = baseSheets == null ? new ArrayList<>() : new ArrayList<>(baseSheets);
-            this.baseSheets.removeIf(name -> name == null || name.isBlank());
+            this.baseSheets = Optional.ofNullable(baseSheets)
+                    .orElseGet(List::of)
+                    .stream()
+                    .filter(ExcelTemplateDefinition::hasText)
+                    .collect(Collectors.toCollection(ArrayList::new));
         }
 
         public void setColumns(List<Column> columns) {
-            this.columns = columns == null ? new ArrayList<>() : new ArrayList<>(columns);
+            this.columns = new ArrayList<>(Optional.ofNullable(columns).orElseGet(List::of));
         }
     }
 
@@ -93,14 +89,11 @@ public class ExcelTemplateDefinition {
         }
 
         public void setAllowedValues(List<String> allowedValues) {
-            this.allowedValues = new ArrayList<>();
-            if (allowedValues != null) {
-                for (String value : allowedValues) {
-                    if (value != null && !value.isBlank()) {
-                        this.allowedValues.add(value);
-                    }
-                }
-            }
+            this.allowedValues = Optional.ofNullable(allowedValues)
+                    .orElseGet(List::of)
+                    .stream()
+                    .filter(ExcelTemplateDefinition::hasText)
+                    .collect(Collectors.toCollection(ArrayList::new));
         }
 
         public ColumnType resolvedType() {
@@ -108,22 +101,17 @@ public class ExcelTemplateDefinition {
         }
 
         public String resolvedFormat() {
-            String explicit = this.format;
-            if (explicit != null) {
-                String trimmed = explicit.trim();
-                if (!trimmed.isEmpty()) {
-                    return trimmed;
-                }
-            }
-            return resolvedType().defaultFormat();
+            return Optional.ofNullable(format)
+                    .map(String::trim)
+                    .filter(ExcelTemplateDefinition::hasText)
+                    .orElseGet(() -> resolvedType().defaultFormat());
         }
 
         public List<String> resolvedAllowedValues() {
-            List<String> values = allowedValues;
-            if ((values == null || values.isEmpty()) && resolvedType() == ColumnType.BOOLEAN) {
+            if (allowedValues.isEmpty() && resolvedType() == ColumnType.BOOLEAN) {
                 return List.of("YES", "NO");
             }
-            return values == null ? List.of() : List.copyOf(values);
+            return List.copyOf(allowedValues);
         }
 
         public String typeLabel() {
@@ -162,13 +150,23 @@ public class ExcelTemplateDefinition {
         private List<String> baseTemplates = new ArrayList<>();
 
         public void setSheets(List<String> sheets) {
-            this.sheets = sheets == null ? new ArrayList<>() : new ArrayList<>(sheets);
-            this.sheets.removeIf(name -> name == null || name.isBlank());
+            this.sheets = Optional.ofNullable(sheets)
+                    .orElseGet(List::of)
+                    .stream()
+                    .filter(ExcelTemplateDefinition::hasText)
+                    .collect(Collectors.toCollection(ArrayList::new));
         }
 
         public void setBaseTemplates(List<String> baseTemplates) {
-            this.baseTemplates = baseTemplates == null ? new ArrayList<>() : new ArrayList<>(baseTemplates);
-            this.baseTemplates.removeIf(name -> name == null || name.isBlank());
+            this.baseTemplates = Optional.ofNullable(baseTemplates)
+                    .orElseGet(List::of)
+                    .stream()
+                    .filter(ExcelTemplateDefinition::hasText)
+                    .collect(Collectors.toCollection(ArrayList::new));
         }
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }
