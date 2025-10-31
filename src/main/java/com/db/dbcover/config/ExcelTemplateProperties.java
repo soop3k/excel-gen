@@ -4,6 +4,7 @@ import com.db.dbcover.template.ExcelTemplateDefinition;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSettings;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSheet;
 import com.db.dbcover.template.TemplateSheetResolver;
+import com.db.dbcover.template.TemplateSheetResolver.ResolvedTemplates;
 import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -19,16 +20,14 @@ public class ExcelTemplateProperties {
 
     private final List<TemplateSheet> templateSheets = new ArrayList<>();
     private final Map<String, TemplateSettings> instrumentTemplates = new LinkedHashMap<>();
-    private transient Map<String, TemplateSheet> resolvedTemplateSheets;
-    private transient Map<String, ExcelTemplateDefinition> resolvedDefinitions;
+    private transient ResolvedTemplates resolved;
 
     public void setTemplateSheets(List<TemplateSheet> templateSheets) {
         this.templateSheets.clear();
         if (templateSheets != null) {
             this.templateSheets.addAll(templateSheets);
         }
-        this.resolvedTemplateSheets = null;
-        this.resolvedDefinitions = null;
+        this.resolved = null;
     }
 
     public void setInstrumentTemplates(Map<String, TemplateSettings> instrumentTemplates) {
@@ -36,7 +35,7 @@ public class ExcelTemplateProperties {
         if (instrumentTemplates != null) {
             this.instrumentTemplates.putAll(instrumentTemplates);
         }
-        this.resolvedDefinitions = null;
+        this.resolved = null;
     }
 
     public static Builder builder() {
@@ -44,20 +43,18 @@ public class ExcelTemplateProperties {
     }
 
     public Map<String, TemplateSheet> resolvedTemplateSheetIndex() {
-        if (resolvedTemplateSheets == null) {
-            resolvedTemplateSheets = TemplateSheetResolver.resolveSheets(getTemplateSheets());
-        }
-        return resolvedTemplateSheets;
+        return ensureResolved().sheetIndex();
     }
 
     public Map<String, ExcelTemplateDefinition> resolvedInstrumentTemplates() {
-        if (resolvedDefinitions == null) {
-            resolvedDefinitions = TemplateSheetResolver.resolveDefinitions(
-                    resolvedTemplateSheetIndex(),
-                    new LinkedHashMap<>(instrumentTemplates)
-            );
+        return ensureResolved().instrumentTemplates();
+    }
+
+    private ResolvedTemplates ensureResolved() {
+        if (resolved == null) {
+            resolved = TemplateSheetResolver.resolve(templateSheets, new LinkedHashMap<>(instrumentTemplates));
         }
-        return resolvedDefinitions;
+        return resolved;
     }
 
     public static final class Builder {

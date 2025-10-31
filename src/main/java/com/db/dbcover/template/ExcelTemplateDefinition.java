@@ -33,12 +33,15 @@ public class ExcelTemplateDefinition {
 
         ExcelTemplateDefinition definition = new ExcelTemplateDefinition();
         List<TemplateSheet> resolvedSheets = new ArrayList<>();
-        for (String sheetName : Optional.ofNullable(settings.getSheets()).orElse(List.of())) {
-            TemplateSheet templateSheet = sheetIndex.get(sheetName);
-            if (templateSheet == null) {
-                throw new IllegalArgumentException("Unknown template sheet: " + sheetName);
+        List<String> sheetNames = settings.getSheets();
+        if (sheetNames != null) {
+            for (String sheetName : sheetNames) {
+                TemplateSheet templateSheet = sheetIndex.get(sheetName);
+                if (templateSheet == null) {
+                    throw new IllegalArgumentException("Unknown template sheet: " + sheetName);
+                }
+                resolvedSheets.add(templateSheet);
             }
-            resolvedSheets.add(templateSheet);
         }
         definition.setSheets(resolvedSheets);
         return definition;
@@ -113,11 +116,11 @@ public class ExcelTemplateDefinition {
         }
 
         public List<String> resolvedAllowedValues() {
-            ColumnType resolvedType = resolvedType();
-            if (resolvedType == ColumnType.BOOLEAN && (allowedValues == null || allowedValues.isEmpty())) {
+            List<String> values = allowedValues;
+            if ((values == null || values.isEmpty()) && resolvedType() == ColumnType.BOOLEAN) {
                 return List.of("YES", "NO");
             }
-            return allowedValues == null ? List.of() : List.copyOf(allowedValues);
+            return values == null ? List.of() : List.copyOf(values);
         }
 
         public String typeLabel() {

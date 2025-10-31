@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 
 @Service
 @RequiredArgsConstructor
@@ -87,8 +88,8 @@ public class ExcelGeneratorService {
         Row infoRow = sheet.createRow(1);
 
         CreationHelper creationHelper = workbook.getCreationHelper();
-        DrawingHolder drawingHolder = new DrawingHolder(sheet.createDrawingPatriarch());
         DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+        org.apache.poi.ss.usermodel.Drawing<?> drawing = sheet.createDrawingPatriarch();
 
         int columnIndex = 0;
         for (Column column : new ArrayList<>(sheetDefinition.getColumns())) {
@@ -101,7 +102,7 @@ public class ExcelGeneratorService {
 
             applyColumnFormat(sheet, columnIndex, column, workbook, dataFormat, formatStyles);
             applyColumnValidation(sheet, validationHelper, columnIndex, column);
-            applyColumnTooltip(creationHelper, drawingHolder, columnIndex, headerCell, column);
+            applyColumnTooltip(creationHelper, drawing, columnIndex, headerCell, column);
 
             sheet.setColumnWidth(columnIndex, 20 * 256);
             columnIndex++;
@@ -132,34 +133,35 @@ public class ExcelGeneratorService {
                                        DataValidationHelper helper,
                                        int columnIndex,
                                        Column column) {
-        ColumnType type = column.resolvedType();
-        DataValidationConstraint constraint = null;
+        DataValidationConstraint constraint;
         boolean suppressDropdown = true;
 
-        if (type == ColumnType.LIST || type == ColumnType.BOOLEAN) {
-            List<String> values = column.resolvedAllowedValues();
-            if (!values.isEmpty()) {
+        switch (column.resolvedType()) {
+            case LIST, BOOLEAN -> {
+                List<String> values = column.resolvedAllowedValues();
+                if (values.isEmpty()) {
+                    return;
+                }
                 constraint = helper.createExplicitListConstraint(values.toArray(String[]::new));
                 suppressDropdown = false;
             }
-        } else if (type == ColumnType.DATE) {
-            constraint = helper.createDateConstraint(
-                    DataValidationConstraint.OperatorType.BETWEEN,
-                    "DATE(1900,1,1)",
-                    "DATE(9999,12,31)",
-                    null
-            );
-        } else if (type == ColumnType.NUMBER) {
-            constraint = helper.createNumericConstraint(
-                    DataValidationConstraint.ValidationType.DECIMAL,
-                    DataValidationConstraint.OperatorType.BETWEEN,
-                    "-1E307",
-                    "1E307"
-            );
-        }
-
-        if (constraint == null) {
-            return;
+            case DATE ->
+                    constraint = helper.createDateConstraint(
+                            DataValidationConstraint.OperatorType.BETWEEN,
+                            "DATE(1900,1,1)",
+                            "DATE(9999,12,31)",
+                            null
+                    );
+            case NUMBER ->
+                    constraint = helper.createNumericConstraint(
+                            DataValidationConstraint.ValidationType.DECIMAL,
+                            DataValidationConstraint.OperatorType.BETWEEN,
+                            "-1E307",
+                            "1E307"
+                    );
+            default -> {
+                return;
+            }
         }
 
         CellRangeAddressList addressList = new CellRangeAddressList(2, 2 + SAMPLE_DATA_ROWS, columnIndex, columnIndex);
@@ -170,7 +172,7 @@ public class ExcelGeneratorService {
     }
 
     private void applyColumnTooltip(CreationHelper creationHelper,
-                                    DrawingHolder drawingHolder,
+                                    org.apache.poi.ss.usermodel.Drawing<?> drawing,
                                     int columnIndex,
                                     Cell headerCell,
                                     Column column) {
@@ -185,28 +187,27 @@ public class ExcelGeneratorService {
         anchor.setRow1(0);
         anchor.setRow2(2);
 
-        Comment comment = drawingHolder.drawing().createCellComment(anchor);
+        Comment comment = drawing.createCellComment(anchor);
         comment.setString(creationHelper.createRichTextString(tooltip));
         headerCell.setCellComment(comment);
     }
 
     private String buildInfoCellValue(Column column) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("type: ").append(column.typeLabel());
-        builder.append(" | required: ").append(column.isRequired() ? "yes" : "no");
+        StringJoiner joiner = new StringJoiner(" | ");
+        joiner.add("type: " + column.typeLabel());
+        joiner.add("required: " + (column.isRequired() ? "yes" : "no"));
         if (column.getDescription() != null && !column.getDescription().isBlank()) {
-            builder.append(" | ").append(column.getDescription());
+            joiner.add(column.getDescription());
         }
         List<String> allowedValues = column.resolvedAllowedValues();
         if (!allowedValues.isEmpty()) {
-            builder.append(" | allowed: ").append(allowedValues);
+            joiner.add("allowed: " + allowedValues);
         }
         String format = column.resolvedFormat();
         if (format != null && !format.isBlank()) {
-            builder.append(" | format: ");
-            builder.append(format);
+            joiner.add("format: " + format);
         }
-        return builder.toString();
+        return joiner.toString();
     }
 
     private String resolveColumnTooltip(Column column) {
@@ -226,8 +227,5 @@ public class ExcelGeneratorService {
         font.setColor(required ? REQUIRED_HEADER_FONT_COLOR : OPTIONAL_HEADER_FONT_COLOR);
         style.setFont(font);
         return style;
-    }
-
-    private record DrawingHolder(org.apache.poi.ss.usermodel.Drawing<?> drawing) {
     }
 }

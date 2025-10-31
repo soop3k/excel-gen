@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -158,21 +159,20 @@ class ExcelGeneratorServiceTest {
     }
 
     private static String buildInfoValue(Column column) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("type: ").append(column.typeLabel());
-        builder.append(" | required: ").append(column.isRequired() ? "yes" : "no");
+        StringJoiner joiner = new StringJoiner(" | ");
+        joiner.add("type: " + column.typeLabel());
+        joiner.add("required: " + (column.isRequired() ? "yes" : "no"));
         if (column.getDescription() != null && !column.getDescription().isBlank()) {
-            builder.append(" | ").append(column.getDescription());
+            joiner.add(column.getDescription());
         }
         List<String> allowedValues = column.resolvedAllowedValues();
         if (!allowedValues.isEmpty()) {
-            builder.append(" | allowed: ").append(allowedValues);
+            joiner.add("allowed: " + allowedValues);
         }
         String format = column.resolvedFormat();
         if (format != null && !format.isBlank()) {
-            builder.append(" | format: ");
-            builder.append(format);
+            joiner.add("format: " + format);
         }
-        return builder.toString();
+        return joiner.toString();
     }
 }
