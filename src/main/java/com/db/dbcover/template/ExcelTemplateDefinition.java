@@ -118,10 +118,6 @@ public class ExcelTemplateDefinition {
         public boolean isRequired() {
             return requiredStatus != null && requiredStatus.isRequired();
         }
-
-        public void setRequired(boolean required) {
-            this.requiredStatus = required ? REQUIRED : NOT_REQUIRED;
-        }
     }
 
     public enum RequiredStatus {
