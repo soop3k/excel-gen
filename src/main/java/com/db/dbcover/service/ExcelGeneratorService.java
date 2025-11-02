@@ -5,7 +5,24 @@ import com.db.dbcover.template.ExcelTemplateDefinition;
 import com.db.dbcover.template.ExcelTemplateDefinition.Column;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSheet;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.*;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.ClientAnchor;
+import org.apache.poi.ss.usermodel.Comment;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -23,7 +40,6 @@ public class ExcelGeneratorService {
     private static final int INITIAL_DATA_ROWS = 10000;
 
     private static final int HEADER_ROW = 0;
-    private static final int INFO_ROW = 1;
 
     private static final short HEADER_FILL_COLOR = IndexedColors.BLUE_GREY.getIndex();
     private static final short OPTIONAL_HEADER_FONT_COLOR = IndexedColors.WHITE.getIndex();
@@ -70,7 +86,6 @@ public class ExcelGeneratorService {
         Sheet sheet = workbook.createSheet(sheetDefinition.getName());
 
         sheet.createRow(HEADER_ROW); // header row
-        sheet.createRow(INFO_ROW); // info row
 
         // protect sheet to enable headers and info cell locking
         sheet.protectSheet(sheetDefinition.getName());
@@ -94,10 +109,8 @@ public class ExcelGeneratorService {
                                Column column,
                                DataFormat dataFormat) {
         Row headerRow = sheet.getRow(HEADER_ROW);
-        Row infoRow = sheet.getRow(INFO_ROW);
         
         createHeaderCell(headerRow, columnIndex, column);
-        createInfoCell(infoRow, columnIndex, column);
         applyColumnFormat(sheet, columnIndex, column, sheet.getWorkbook(), dataFormat);
         applyColumnValidation(sheet, sheet.getDataValidationHelper(), columnIndex, column);
         applyColumnTooltip(sheet.getWorkbook().getCreationHelper(), sheet.createDrawingPatriarch(), columnIndex, 
@@ -116,22 +129,12 @@ public class ExcelGeneratorService {
         headerCell.setCellStyle(column.isRequired() ? requiredHeaderStyle : headerStyle);
     }
 
-    private void createInfoCell(Row infoRow, int columnIndex, Column column) {
-        Cell infoCell = infoRow.createCell(columnIndex);
-        infoCell.setCellValue(buildInfoCellValue(column));
-        
-        // Apply text wrapping to prevent long descriptions from affecting column width
-        Workbook workbook = infoRow.getSheet().getWorkbook();
-        CellStyle infoStyle = workbook.createCellStyle();
-        infoStyle.setWrapText(true);
-        infoStyle.setLocked(true);
-        infoStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-        infoCell.setCellStyle(infoStyle);
-    }
 
     private void finalizeSheet(Sheet sheet, int columnCount) {
         if (columnCount > 0) {
-            sheet.setAutoFilter(new CellRangeAddress(HEADER_ROW, INFO_ROW, 0, columnCount - 1));
+            sheet.setAutoFilter(new CellRangeAddress(
+                    HEADER_ROW, HEADER_ROW,
+                    0, columnCount - 1));
         }
         sheet.createFreezePane(0, 2);
     }
@@ -180,7 +183,8 @@ public class ExcelGeneratorService {
             }
         }
 
-        CellRangeAddressList addressList = new CellRangeAddressList(2, 2 + INITIAL_DATA_ROWS, columnIndex, columnIndex);
+        int firstRow = HEADER_ROW + 1;
+        CellRangeAddressList addressList = new CellRangeAddressList( firstRow, firstRow + INITIAL_DATA_ROWS, columnIndex, columnIndex);
         DataValidation validation = helper.createValidation(constraint, addressList);
         validation.setShowErrorBox(true);
         sheet.addValidationData(validation);
