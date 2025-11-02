@@ -71,6 +71,10 @@ public class ExcelGeneratorService {
 
         sheet.createRow(HEADER_ROW); // header row
         sheet.createRow(INFO_ROW); // info row
+
+        // protect sheet to enable headers and info cell locking
+        sheet.protectSheet(sheetDefinition.getName());
+
         return sheet;
     }
 
@@ -188,6 +192,7 @@ public class ExcelGeneratorService {
                                     Cell headerCell,
                                     Column column) {
         String tooltip = resolveColumnTooltip(column);
+
         ClientAnchor anchor = creationHelper.createClientAnchor();
         anchor.setCol1(columnIndex);
         anchor.setCol2(columnIndex + 2);
