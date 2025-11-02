@@ -3,37 +3,37 @@ excel:
     template-sheets:
       - name: INSTRUMENT_DETAILS
         columns:
-          - { header: INSTRUMENT_ID, type: TEXT, required: true, description: "Unique instrument identifier" }
-          - { header: INSTRUMENT_NAME, type: TEXT, required: true, description: "Instrument name" }
-          - { header: CURRENCY, type: LIST, required: true, description: "ISO 4217 currency code", allowed-values: [PLN, EUR, USD] }
-          - { header: ISSUE_DATE, type: DATE, required: false, description: "Issue date", format: dd/mm/yyyy }
+          - { header: INSTRUMENT_ID, type: TEXT, required: REQUIRED, description: "Unique instrument identifier" }
+          - { header: INSTRUMENT_NAME, type: TEXT, required: REQUIRED, description: "Instrument name" }
+          - { header: CURRENCY, type: LIST, required: REQUIRED, description: "ISO 4217 currency code", allowed-values: [PLN, EUR, USD] }
+          - { header: ISSUE_DATE, type: DATE, required: NOT_REQUIRED, description: "Issue date", format: dd/mm/yyyy }
       - name: LINKED_DEALS
         columns:
-          - { header: DEAL_ID, type: TEXT, required: true }
-          - { header: DEAL_TYPE, type: LIST, required: true, description: "Deal type (e.g. PRIMARY, SECONDARY)", allowed-values: [PRIMARY, SECONDARY, TERTIARY] }
-          - { header: DEAL_DATE, type: DATE, required: true, format: dd.mm.yyyy, tooltip: "Select the deal date in dd.mm.yyyy format" }
-          - { header: NOTIONAL, type: NUMBER, required: true, description: "Notional amount", tooltip: "Provide the notional amount in the deal currency" }
+          - { header: DEAL_ID, type: TEXT, required: REQUIRED }
+          - { header: DEAL_TYPE, type: LIST, required: REQUIRED, description: "Deal type (e.g. PRIMARY, SECONDARY)", allowed-values: [PRIMARY, SECONDARY, TERTIARY] }
+          - { header: DEAL_DATE, type: DATE, required: REQUIRED, format: dd.mm.yyyy, tooltip: "Select the deal date in dd.mm.yyyy format" }
+          - { header: NOTIONAL, type: NUMBER, required: REQUIRED, description: "Notional amount", tooltip: "Provide the notional amount in the deal currency" }
       - name: LINKED_ASSETS
         columns:
-          - { header: ASSET_ID, type: TEXT, required: true }
-          - { header: ASSET_CLASS, type: TEXT, required: true }
-          - { header: ASSET_VALUE, type: NUMBER, required: false }
+          - { header: ASSET_ID, type: TEXT, required: REQUIRED }
+          - { header: ASSET_CLASS, type: TEXT, required: REQUIRED }
+          - { header: ASSET_VALUE, type: NUMBER, required: NOT_REQUIRED }
       - name: PERSISTED_IDS
         columns:
-          - { header: ENTITY_TYPE, type: TEXT, required: true }
-          - { header: LEGACY_ID, type: TEXT, required: true }
-          - { header: SOURCE_SYSTEM, type: TEXT, required: false }
+          - { header: ENTITY_TYPE, type: TEXT, required: REQUIRED }
+          - { header: LEGACY_ID, type: TEXT, required: REQUIRED }
+          - { header: SOURCE_SYSTEM, type: TEXT, required: NOT_REQUIRED }
       - name: LINKED_INSTRUMENTS
         columns:
-          - { header: MASTER_INSTRUMENT_ID, type: TEXT, required: true }
-          - { header: RELATED_INSTRUMENT_ID, type: TEXT, required: true }
-          - { header: RELATIONSHIP_TYPE, type: TEXT, required: true }
+          - { header: MASTER_INSTRUMENT_ID, type: TEXT, required: REQUIRED }
+          - { header: RELATED_INSTRUMENT_ID, type: TEXT, required: REQUIRED }
+          - { header: RELATIONSHIP_TYPE, type: TEXT, required: REQUIRED }
       - name: LINKED_PARTIES
         columns:
-          - { header: PARTY_ID, type: TEXT, required: true }
-          - { header: PARTY_ROLE, type: TEXT, required: true, description: "Role (e.g. ISSUER, GUARANTOR)" }
-          - { header: PARTY_NAME, type: TEXT, required: true }
-          - { header: COUNTRY, type: TEXT, required: false }
+          - { header: PARTY_ID, type: TEXT, required: REQUIRED }
+          - { header: PARTY_ROLE, type: TEXT, required: REQUIRED, description: "Role (e.g. ISSUER, GUARANTOR)" }
+          - { header: PARTY_NAME, type: TEXT, required: REQUIRED }
+          - { header: COUNTRY, type: TEXT, required: NOT_REQUIRED }
 
     instrument-templates:
       MORTGAGE:

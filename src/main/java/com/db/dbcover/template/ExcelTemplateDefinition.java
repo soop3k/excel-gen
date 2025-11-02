@@ -3,13 +3,16 @@ package com.db.dbcover.template;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.poi.ss.usermodel.CellType;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.REQUIRED;
+import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.NOT_REQUIRED;
 
 @Getter
 public class ExcelTemplateDefinition {
@@ -21,14 +24,11 @@ public class ExcelTemplateDefinition {
     }
 
     public void setSheets(List<TemplateSheet> sheets) {
-        this.sheets = new ArrayList<>(Optional.ofNullable(sheets).orElseGet(List::of));
+        this.sheets = Optional.ofNullable(sheets).orElseGet(List::of);
     }
 
     public static ExcelTemplateDefinition fromSettings(TemplateSettings settings,
                                                        java.util.Map<String, TemplateSheet> sheetIndex) {
-        Objects.requireNonNull(settings, "settings must not be null");
-        Objects.requireNonNull(sheetIndex, "sheetIndex must not be null");
-
         ExcelTemplateDefinition definition = new ExcelTemplateDefinition();
         List<TemplateSheet> resolvedSheets = Optional.ofNullable(settings.getSheets())
                 .orElseGet(List::of)
@@ -51,11 +51,11 @@ public class ExcelTemplateDefinition {
         private List<Column> columns = new ArrayList<>();
 
         public List<String> getBaseSheets() {
-            return Collections.unmodifiableList(baseSheets);
+            return Collections.unmodifiableList(baseSheets != null ? baseSheets : List.of());
         }
 
         public List<Column> getColumns() {
-            return Collections.unmodifiableList(columns);
+            return Collections.unmodifiableList(columns != null ? columns : List.of());
         }
 
         public void setBaseSheets(List<String> baseSheets) {
@@ -67,7 +67,7 @@ public class ExcelTemplateDefinition {
         }
 
         public void setColumns(List<Column> columns) {
-            this.columns = new ArrayList<>(Optional.ofNullable(columns).orElseGet(List::of));
+            this.columns = Optional.ofNullable(columns).orElseGet(List::of);
         }
     }
 
@@ -76,7 +76,7 @@ public class ExcelTemplateDefinition {
     @Builder
     public static class Column {
         private String header;
-        private boolean required;
+        private RequiredStatus requiredStatus;
         private String description;
         private String format;
         private String tooltip;
@@ -85,7 +85,7 @@ public class ExcelTemplateDefinition {
         private List<String> allowedValues = new ArrayList<>();
 
         public List<String> getAllowedValues() {
-            return Collections.unmodifiableList(allowedValues);
+            return Collections.unmodifiableList(allowedValues != null ? allowedValues : new ArrayList<>());
         }
 
         public void setAllowedValues(List<String> allowedValues) {
@@ -108,38 +108,53 @@ public class ExcelTemplateDefinition {
         }
 
         public List<String> resolvedAllowedValues() {
-            if (allowedValues.isEmpty() && resolvedType() == ColumnType.BOOLEAN) {
+            List<String> values = getAllowedValues();
+            if (values.isEmpty() && resolvedType() == ColumnType.BOOLEAN) {
                 return List.of("YES", "NO");
             }
-            return List.copyOf(allowedValues);
+            return values;
         }
 
-        public String typeLabel() {
-            return resolvedType().label();
+        public boolean isRequired() {
+            return requiredStatus != null && requiredStatus.isRequired();
+        }
+
+        public void setRequired(boolean required) {
+            this.requiredStatus = required ? REQUIRED : NOT_REQUIRED;
+        }
+    }
+
+    public enum RequiredStatus {
+        REQUIRED, NOT_REQUIRED;
+        
+        public boolean isRequired() {
+            return this == REQUIRED;
         }
     }
 
     public enum ColumnType {
-        TEXT("TEXT", "@"),
-        NUMBER("NUMBER", "#,##0.00############"),
-        DATE("DATE", "dd/mm/yyyy"),
-        LIST("LIST", "@"),
-        BOOLEAN("BOOLEAN", "@");
+        TEXT("TEXT", "@", CellType.STRING),
+        NUMBER("NUMBER", "#,##0.00############", CellType.NUMERIC),
+        DATE("DATE", "dd/mm/yyyy", CellType.NUMERIC),
+        LIST("LIST", "@", CellType.STRING),
+        BOOLEAN("BOOLEAN", "@", CellType.STRING);
 
         private final String label;
         private final String defaultFormat;
+        private final CellType cellType;
 
-        ColumnType(String label, String defaultFormat) {
+        ColumnType(String label, String defaultFormat, CellType cellType) {
             this.label = label;
             this.defaultFormat = defaultFormat;
-        }
-
-        public String label() {
-            return label;
+            this.cellType = cellType;
         }
 
         public String defaultFormat() {
             return defaultFormat;
+        }
+
+        public CellType cellType() {
+            return cellType;
         }
     }
 
@@ -147,18 +162,9 @@ public class ExcelTemplateDefinition {
     @Setter
     public static class TemplateSettings {
         private List<String> sheets = new ArrayList<>();
-        private List<String> baseTemplates = new ArrayList<>();
 
         public void setSheets(List<String> sheets) {
             this.sheets = Optional.ofNullable(sheets)
-                    .orElseGet(List::of)
-                    .stream()
-                    .filter(ExcelTemplateDefinition::hasText)
-                    .collect(Collectors.toCollection(ArrayList::new));
-        }
-
-        public void setBaseTemplates(List<String> baseTemplates) {
-            this.baseTemplates = Optional.ofNullable(baseTemplates)
                     .orElseGet(List::of)
                     .stream()
                     .filter(ExcelTemplateDefinition::hasText)

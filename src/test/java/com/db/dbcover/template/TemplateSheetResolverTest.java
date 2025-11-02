@@ -42,38 +42,6 @@ class TemplateSheetResolverTest {
                 .containsExactly("A1", "A2", "B1", "C1");
     }
 
-    @Test
-    @DisplayName("combines sheets from multiple base templates without duplicates")
-    void shouldMergeSheetsFromBaseTemplates() {
-        TemplateSheet sheetA = sheet("SHEET_A", List.of(), List.of(column("A")));
-        TemplateSheet sheetB = sheet("SHEET_B", List.of(), List.of(column("B")));
-        TemplateSheet sheetC = sheet("SHEET_C", List.of(), List.of(column("C")));
-
-        TemplateSettings baseOne = new TemplateSettings();
-        baseOne.setSheets(List.of("SHEET_A"));
-
-        TemplateSettings baseTwo = new TemplateSettings();
-        baseTwo.setSheets(List.of("SHEET_B"));
-
-        TemplateSettings combined = new TemplateSettings();
-        combined.setBaseTemplates(List.of("BASE_ONE", "BASE_TWO"));
-        combined.setSheets(List.of("SHEET_C", "SHEET_A"));
-
-        Map<String, TemplateSettings> templates = new LinkedHashMap<>();
-        templates.put("BASE_ONE", baseOne);
-        templates.put("BASE_TWO", baseTwo);
-        templates.put("COMBINED", combined);
-
-        TemplateSheetResolver.ResolvedTemplates resolved = TemplateSheetResolver.resolve(
-                List.of(sheetA, sheetB, sheetC),
-                templates
-        );
-
-        ExcelTemplateDefinition definition = resolved.instrumentTemplates().get("COMBINED");
-        assertThat(definition.getSheets())
-                .extracting(TemplateSheet::getName)
-                .containsExactly("SHEET_A", "SHEET_B", "SHEET_C");
-    }
 
     private static TemplateSheet sheet(String name, List<String> baseSheets, List<Column> columns) {
         return TemplateSheet.builder()

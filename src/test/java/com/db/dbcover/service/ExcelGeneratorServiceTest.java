@@ -5,6 +5,14 @@ import com.db.dbcover.template.DefaultExcelTemplates;
 import com.db.dbcover.template.ExcelTemplateDefinition;
 import com.db.dbcover.template.ExcelTemplateDefinition.Column;
 import com.db.dbcover.template.ExcelTemplateDefinition.ColumnType;
+import com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus;
+import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.REQUIRED;
+import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.NOT_REQUIRED;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.BOOLEAN;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.LIST;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.DATE;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.NUMBER;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.TEXT;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSheet;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -49,7 +57,6 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
-    @DisplayName("generates configured sheets with metadata, freeze panes, and filters")
     void shouldGenerateAllConfiguredSheetsWithMetadata() throws IOException {
         ExcelTemplateDefinition definition = properties.resolvedInstrumentTemplates().get("MORTGAGE");
         byte[] workbookBytes = service.generateTemplate(definition);
@@ -97,16 +104,15 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
-    @DisplayName("applies list and numeric validations based on column types")
     void shouldApplyValidations() throws IOException {
         ExcelTemplateDefinition definition = new ExcelTemplateDefinition();
         TemplateSheet sheet = TemplateSheet.builder()
                 .name("VALIDATIONS")
                 .columns(List.of(
-                        column("FLAG", ColumnType.BOOLEAN, true, null, null, null, null),
-                        column("CHOICE", ColumnType.LIST, false, null, null, null, List.of("A", "B")),
-                        column("WHEN", ColumnType.DATE, false, null, null, null, null),
-                        column("AMOUNT", ColumnType.NUMBER, false, null, null, null, null)
+                        column("FLAG", BOOLEAN, REQUIRED, null, null, null, null),
+                        column("CHOICE", LIST, NOT_REQUIRED, null, null, null, List.of("A", "B")),
+                        column("WHEN", DATE, NOT_REQUIRED, null, null, null, null),
+                        column("AMOUNT", NUMBER, NOT_REQUIRED, null, null, null, null)
                 ))
                 .build();
         definition.setSheets(List.of(sheet));
@@ -134,7 +140,6 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
-    @DisplayName("throws when instrument type is missing")
     void shouldRequireInstrumentType() {
         assertThatThrownBy(() -> service.generateTemplate(" "))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -142,7 +147,6 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
-    @DisplayName("throws when instrument type is unknown")
     void shouldRejectUnknownInstrumentType() {
         assertThatThrownBy(() -> service.generateTemplate("UNKNOWN"))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -150,7 +154,6 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
-    @DisplayName("creates validations for constrained columns")
     void shouldDelegateValidationCreation() throws Exception {
         Method method = ExcelGeneratorService.class.getDeclaredMethod(
                 "applyColumnValidation",
@@ -170,7 +173,7 @@ class ExcelGeneratorServiceTest {
 
         Column listColumn = Column.builder()
                 .header("CHOICE")
-                .type(ColumnType.LIST)
+                .type(LIST)
                 .build();
         listColumn.setAllowedValues(List.of("A", "B"));
 
@@ -182,7 +185,6 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
-    @DisplayName("skips validation when column type has no constraints")
     void shouldSkipValidationForUnconstrainedTypes() throws Exception {
         Method method = ExcelGeneratorService.class.getDeclaredMethod(
                 "applyColumnValidation",
@@ -198,7 +200,7 @@ class ExcelGeneratorServiceTest {
 
         Column textColumn = Column.builder()
                 .header("FREE_TEXT")
-                .type(ColumnType.TEXT)
+                .type(TEXT)
                 .build();
 
         method.invoke(service, sheet, helper, 0, textColumn);
@@ -209,7 +211,7 @@ class ExcelGeneratorServiceTest {
 
     private static Column column(String header,
                                  ColumnType type,
-                                 boolean required,
+                                 RequiredStatus requiredStatus,
                                  String description,
                                  String format,
                                  String tooltip,
@@ -217,7 +219,7 @@ class ExcelGeneratorServiceTest {
         Column column = Column.builder()
                 .header(header)
                 .type(type)
-                .required(required)
+                .requiredStatus(requiredStatus)
                 .description(description)
                 .format(format)
                 .tooltip(tooltip)
@@ -227,20 +229,7 @@ class ExcelGeneratorServiceTest {
     }
 
     private static String buildInfoValue(Column column) {
-        StringJoiner joiner = new StringJoiner(" | ");
-        joiner.add("type: " + column.typeLabel());
-        joiner.add("required: " + (column.isRequired() ? "yes" : "no"));
-        if (column.getDescription() != null && !column.getDescription().isBlank()) {
-            joiner.add(column.getDescription());
-        }
-        List<String> allowedValues = column.resolvedAllowedValues();
-        if (!allowedValues.isEmpty()) {
-            joiner.add("allowed: " + allowedValues);
-        }
-        String format = column.resolvedFormat();
-        if (format != null && !format.isBlank()) {
-            joiner.add("format: " + format);
-        }
-        return joiner.toString();
+        String description = column.getDescription();
+        return (description != null && !description.trim().isEmpty()) ? description : "";
     }
 }

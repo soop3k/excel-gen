@@ -5,7 +5,6 @@ import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSettings;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSheet;
 import com.db.dbcover.template.TemplateSheetResolver;
 import com.db.dbcover.template.TemplateSheetResolver.ResolvedTemplates;
-import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -14,45 +13,33 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Getter
 @ConfigurationProperties(prefix = "excel.template")
 public class ExcelTemplateProperties {
 
-    private final List<TemplateSheet> templateSheets = new ArrayList<>();
-    private final Map<String, TemplateSettings> instrumentTemplates = new LinkedHashMap<>();
+    private final List<TemplateSheet> templateSheets;
+    private final Map<String, TemplateSettings> instrumentTemplates;
     private transient ResolvedTemplates resolved;
 
-    public void setTemplateSheets(List<TemplateSheet> templateSheets) {
-        this.templateSheets.clear();
-        if (templateSheets != null) {
-            this.templateSheets.addAll(templateSheets);
-        }
-        this.resolved = null;
-    }
-
-    public void setInstrumentTemplates(Map<String, TemplateSettings> instrumentTemplates) {
-        this.instrumentTemplates.clear();
-        if (instrumentTemplates != null) {
-            this.instrumentTemplates.putAll(instrumentTemplates);
-        }
-        this.resolved = null;
+    public ExcelTemplateProperties(List<TemplateSheet> templateSheets, Map<String, TemplateSettings> instrumentTemplates) {
+        this.templateSheets = templateSheets != null ? templateSheets : List.of();
+        this.instrumentTemplates = instrumentTemplates != null ? instrumentTemplates : Map.of();
     }
 
     public static Builder builder() {
         return new Builder();
     }
 
-    public Map<String, TemplateSheet> resolvedTemplateSheetIndex() {
-        return ensureResolved().sheetIndex();
+    public void initialize() {
+        ensureResolved();
     }
-
+    
     public Map<String, ExcelTemplateDefinition> resolvedInstrumentTemplates() {
         return ensureResolved().instrumentTemplates();
     }
 
     private ResolvedTemplates ensureResolved() {
         if (resolved == null) {
-            resolved = TemplateSheetResolver.resolve(templateSheets, new LinkedHashMap<>(instrumentTemplates));
+            resolved = TemplateSheetResolver.resolve(templateSheets, instrumentTemplates);
         }
         return resolved;
     }
@@ -61,24 +48,10 @@ public class ExcelTemplateProperties {
         private final List<TemplateSheet> templateSheets = new ArrayList<>();
         private final Map<String, TemplateSettings> instrumentTemplates = new LinkedHashMap<>();
 
-        public Builder addTemplateSheet(TemplateSheet sheet) {
-            if (sheet != null) {
-                this.templateSheets.add(sheet);
-            }
-            return this;
-        }
-
         public Builder templateSheets(Collection<TemplateSheet> sheets) {
             this.templateSheets.clear();
             if (sheets != null) {
                 this.templateSheets.addAll(sheets);
-            }
-            return this;
-        }
-
-        public Builder putInstrumentTemplate(String name, TemplateSettings settings) {
-            if (name != null && settings != null) {
-                this.instrumentTemplates.put(name, settings);
             }
             return this;
         }
@@ -92,10 +65,7 @@ public class ExcelTemplateProperties {
         }
 
         public ExcelTemplateProperties build() {
-            ExcelTemplateProperties properties = new ExcelTemplateProperties();
-            properties.templateSheets.addAll(this.templateSheets);
-            properties.instrumentTemplates.putAll(this.instrumentTemplates);
-            return properties;
+            return new ExcelTemplateProperties(this.templateSheets, this.instrumentTemplates);
         }
     }
 }
