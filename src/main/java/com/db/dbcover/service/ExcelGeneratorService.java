@@ -22,8 +22,11 @@ public class ExcelGeneratorService {
 
     private static final int INITIAL_DATA_ROWS = 10000;
 
-    private static final short HEADER_FILL_COLOR = IndexedColors.GREY_25_PERCENT.getIndex();
-    private static final short OPTIONAL_HEADER_FONT_COLOR = IndexedColors.BLACK.getIndex();
+    private static final int HEADER_ROW = 0;
+    private static final int INFO_ROW = 1;
+
+    private static final short HEADER_FILL_COLOR = IndexedColors.BLUE_GREY.getIndex();
+    private static final short OPTIONAL_HEADER_FONT_COLOR = IndexedColors.WHITE.getIndex();
     private static final short REQUIRED_HEADER_FONT_COLOR = IndexedColors.RED.getIndex();
 
     private final ExcelTemplateProperties properties;
@@ -59,26 +62,16 @@ public class ExcelGeneratorService {
                              TemplateSheet sheetDefinition,
                              DataFormat dataFormat) {
         Sheet sheet = initializeSheet(workbook, sheetDefinition);
-        int columnCount = sheetDefinition.getColumns().size();
-        createDataRows(sheet, columnCount);
-        processColumns(sheet, sheetDefinition, dataFormat);
+        int columnCount = processColumns(sheet, sheetDefinition, dataFormat);
         finalizeSheet(sheet, columnCount);
     }
 
     private Sheet initializeSheet(Workbook workbook, TemplateSheet sheetDefinition) {
         Sheet sheet = workbook.createSheet(sheetDefinition.getName());
-        sheet.createRow(0); // header row
-        sheet.createRow(1); // info row
-        return sheet;
-    }
 
-    private void createDataRows(Sheet sheet, int columnCount) {
-        for (int rowIndex = 2; rowIndex < 2 + INITIAL_DATA_ROWS; rowIndex++) {
-            Row row = sheet.createRow(rowIndex);
-            for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
-                row.createCell(columnIndex);
-            }
-        }
+        sheet.createRow(HEADER_ROW); // header row
+        sheet.createRow(INFO_ROW); // info row
+        return sheet;
     }
 
     private int processColumns(Sheet sheet,
@@ -96,8 +89,8 @@ public class ExcelGeneratorService {
                                int columnIndex,
                                Column column,
                                DataFormat dataFormat) {
-        Row headerRow = sheet.getRow(0);
-        Row infoRow = sheet.getRow(1);
+        Row headerRow = sheet.getRow(HEADER_ROW);
+        Row infoRow = sheet.getRow(INFO_ROW);
         
         createHeaderCell(headerRow, columnIndex, column);
         createInfoCell(infoRow, columnIndex, column);
@@ -125,14 +118,16 @@ public class ExcelGeneratorService {
         
         // Apply text wrapping to prevent long descriptions from affecting column width
         Workbook workbook = infoRow.getSheet().getWorkbook();
-        CellStyle wrapStyle = workbook.createCellStyle();
-        wrapStyle.setWrapText(true);
-        infoCell.setCellStyle(wrapStyle);
+        CellStyle infoStyle = workbook.createCellStyle();
+        infoStyle.setWrapText(true);
+        infoStyle.setLocked(true);
+        infoStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+        infoCell.setCellStyle(infoStyle);
     }
 
     private void finalizeSheet(Sheet sheet, int columnCount) {
         if (columnCount > 0) {
-            sheet.setAutoFilter(new CellRangeAddress(0, 1, 0, columnCount - 1));
+            sheet.setAutoFilter(new CellRangeAddress(HEADER_ROW, INFO_ROW, 0, columnCount - 1));
         }
         sheet.createFreezePane(0, 2);
     }
@@ -206,13 +201,13 @@ public class ExcelGeneratorService {
 
     private String buildInfoCellValue(Column column) {
         return Optional.ofNullable(column.getDescription())
-                .filter(value -> value != null && !value.isBlank())
+                .filter(value -> !value.isBlank())
                 .orElse("");
     }
 
     private String resolveColumnTooltip(Column column) {
         return Optional.ofNullable(column.getTooltip())
-                .filter(value -> value != null && !value.isBlank())
+                .filter(value -> !value.isBlank())
                 .orElseGet(() -> buildInfoCellValue(column));
     }
 
@@ -225,6 +220,10 @@ public class ExcelGeneratorService {
         font.setBold(true);
         font.setColor(required ? REQUIRED_HEADER_FONT_COLOR : OPTIONAL_HEADER_FONT_COLOR);
         style.setFont(font);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setLocked(true);
+
         return style;
     }
 
