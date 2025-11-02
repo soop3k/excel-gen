@@ -14,22 +14,30 @@ import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.DATE;
 import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.NUMBER;
 import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.TEXT;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSheet;
+import org.apache.poi.ss.usermodel.BorderFormatting;
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Comment;
+import org.apache.poi.ss.usermodel.ConditionalFormatting;
+import org.apache.poi.ss.usermodel.ConditionalFormattingRule;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataValidationConstraint;
 import org.apache.poi.ss.usermodel.DataValidationHelper;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.SheetConditionalFormatting;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.PaneInformation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -138,6 +146,55 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
+    void shouldHighlightEmptyRequiredCells() throws Exception {
+        ExcelTemplateDefinition definition = new ExcelTemplateDefinition();
+        TemplateSheet sheet = TemplateSheet.builder()
+                .name("REQUIRED_FORMATTING")
+                .columns(List.of(
+                        column("MANDATORY", TEXT, REQUIRED, null, null, null, null),
+                        column("OPTIONAL", TEXT, NOT_REQUIRED, null, null, null, null)
+                ))
+                .build();
+        definition.setSheets(List.of(sheet));
+
+        byte[] workbookBytes = service.generateTemplate(definition);
+        try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(workbookBytes))) {
+            Sheet workbookSheet = workbook.getSheet("REQUIRED_FORMATTING");
+            assertThat(workbookSheet).isNotNull();
+
+            SheetConditionalFormatting conditionalFormatting = workbookSheet.getSheetConditionalFormatting();
+            assertThat(conditionalFormatting.getNumConditionalFormattings()).isEqualTo(1);
+
+            ConditionalFormatting formatting = conditionalFormatting.getConditionalFormattingAt(0);
+            assertThat(formatting.getNumberOfRules()).isEqualTo(1);
+
+            CellRangeAddress range = formatting.getFormattingRanges()[0];
+            assertThat(range.getFirstColumn()).isEqualTo(0);
+            assertThat(range.getLastColumn()).isEqualTo(0);
+
+            int firstRow = range.getFirstRow();
+            assertThat(firstRow).isEqualTo(1);
+            assertThat(range.getLastRow()).isEqualTo(firstRow + initialDataRows());
+
+            ConditionalFormattingRule rule = formatting.getRule(0);
+            assertThat(rule.getFormula1()).isEqualTo("LEN(TRIM($A2))=0");
+
+            BorderFormatting borderFormatting = rule.getBorderFormatting();
+            assertThat(borderFormatting).isNotNull();
+            assertThat(borderFormatting.getBorderTop()).isEqualTo(BorderStyle.THIN);
+            assertThat(borderFormatting.getBorderBottom()).isEqualTo(BorderStyle.THIN);
+            assertThat(borderFormatting.getBorderLeft()).isEqualTo(BorderStyle.THIN);
+            assertThat(borderFormatting.getBorderRight()).isEqualTo(BorderStyle.THIN);
+
+            short redIndex = IndexedColors.RED.getIndex();
+            assertThat(borderFormatting.getTopBorderColor()).isEqualTo(redIndex);
+            assertThat(borderFormatting.getBottomBorderColor()).isEqualTo(redIndex);
+            assertThat(borderFormatting.getLeftBorderColor()).isEqualTo(redIndex);
+            assertThat(borderFormatting.getRightBorderColor()).isEqualTo(redIndex);
+        }
+    }
+
+    @Test
     void shouldRequireInstrumentType() {
         assertThatThrownBy(() -> service.generateTemplate(" "))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -205,6 +262,12 @@ class ExcelGeneratorServiceTest {
 
         verify(helper, never()).createValidation(any(), any());
         verify(sheet, never()).addValidationData(any());
+    }
+
+    private int initialDataRows() throws Exception {
+        Field field = ExcelGeneratorService.class.getDeclaredField("INITIAL_DATA_ROWS");
+        field.setAccessible(true);
+        return field.getInt(null);
     }
 
     private static Column column(String header,

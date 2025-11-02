@@ -6,10 +6,13 @@ import com.db.dbcover.template.ExcelTemplateDefinition.Column;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSheet;
 import lombok.RequiredArgsConstructor;
 
+import org.apache.poi.ss.usermodel.BorderFormatting;
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.ClientAnchor;
 import org.apache.poi.ss.usermodel.Comment;
+import org.apache.poi.ss.usermodel.ConditionalFormattingRule;
 import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.DataValidation;
@@ -21,10 +24,12 @@ import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.SheetConditionalFormatting;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFDataValidation;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -152,6 +157,8 @@ public class ExcelGeneratorService {
         style.setDataFormat(dataFormat.getFormat(normalizedFormat));
         style.setLocked(false);
         sheet.setDefaultColumnStyle(columnIndex, style);
+
+        applyRequiredColumnConditionalFormatting(sheet, columnIndex, column);
     }
 
     private void applyColumnValidation(Sheet sheet,
@@ -209,6 +216,40 @@ public class ExcelGeneratorService {
         validation.setShowPromptBox(true);
 
         sheet.addValidationData(validation);
+    }
+
+    private void applyRequiredColumnConditionalFormatting(Sheet sheet,
+                                                          int columnIndex,
+                                                          Column column) {
+        if (!column.isRequired()) {
+            return;
+        }
+
+        SheetConditionalFormatting conditionalFormatting = sheet.getSheetConditionalFormatting();
+
+        int firstRow = HEADER_ROW + 1;
+        int lastRow = firstRow + INITIAL_DATA_ROWS;
+        CellRangeAddress[] regions = { new CellRangeAddress(firstRow, lastRow, columnIndex, columnIndex) };
+
+        String columnLetter = CellReference.convertNumToColString(columnIndex);
+        int excelFirstDataRow = HEADER_ROW + 2;
+        String formula = String.format("LEN(TRIM($%s%d))=0", columnLetter, excelFirstDataRow);
+
+        ConditionalFormattingRule emptyCellRule = conditionalFormatting.createConditionalFormattingRule(formula);
+        BorderFormatting borderFormatting = emptyCellRule.createBorderFormatting();
+
+        borderFormatting.setBorderBottom(BorderStyle.THIN);
+        borderFormatting.setBorderTop(BorderStyle.THIN);
+        borderFormatting.setBorderLeft(BorderStyle.THIN);
+        borderFormatting.setBorderRight(BorderStyle.THIN);
+
+        short red = IndexedColors.RED.getIndex();
+        borderFormatting.setBottomBorderColor(red);
+        borderFormatting.setTopBorderColor(red);
+        borderFormatting.setLeftBorderColor(red);
+        borderFormatting.setRightBorderColor(red);
+
+        conditionalFormatting.addConditionalFormatting(regions, emptyCellRule);
     }
 
     private String buildInfoCellValue(Column column) {
