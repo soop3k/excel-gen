@@ -34,7 +34,7 @@ public final class DefaultExcelTemplates {
                 textColumn("DEAL_ID", REQUIRED),
                 listColumn("DEAL_TYPE", REQUIRED, List.of("PRIMARY", "SECONDARY", "TERTIARY"), "Deal type (e.g. PRIMARY, SECONDARY)"),
                 dateColumn("DEAL_DATE", REQUIRED, null, "dd.mm.yyyy", "Select the deal date in dd.mm.yyyy format"),
-                numberColumn("NOTIONAL", REQUIRED, "Notional amount", null, "Provide the notional amount in the deal currency")
+                numberColumn("NOTIONAL", REQUIRED, "Notional amount", "#,##0.00", "Provide the notional amount in the deal currency")
         );
 
         TemplateSheet linkedAssets = sheet("LINKED_ASSETS",
@@ -101,7 +101,7 @@ public final class DefaultExcelTemplates {
     private static Column textColumn(String header, RequiredStatus requiredStatus, String description) {
         return Column.builder()
                 .header(header)
-                .requiredStatus(requiredStatus)
+                .required(requiredStatus)
                 .description(description)
                 .type(TEXT)
                 .build();
@@ -122,7 +122,7 @@ public final class DefaultExcelTemplates {
                                        String tooltip) {
         return Column.builder()
                 .header(header)
-                .requiredStatus(requiredStatus)
+                .required(requiredStatus)
                 .description(description)
                 .format(format)
                 .tooltip(tooltip)
@@ -145,7 +145,7 @@ public final class DefaultExcelTemplates {
                                      String tooltip) {
         return Column.builder()
                 .header(header)
-                .requiredStatus(requiredStatus)
+                .required(requiredStatus)
                 .description(description)
                 .format(format)
                 .tooltip(tooltip)
@@ -159,7 +159,7 @@ public final class DefaultExcelTemplates {
                                      String description) {
         Column column = Column.builder()
                 .header(header)
-                .requiredStatus(requiredStatus)
+                .required(requiredStatus)
                 .description(description)
                 .type(LIST)
                 .build();

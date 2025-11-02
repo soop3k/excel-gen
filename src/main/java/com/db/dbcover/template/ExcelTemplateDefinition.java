@@ -3,7 +3,6 @@ package com.db.dbcover.template;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.poi.ss.usermodel.CellType;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,8 +10,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.REQUIRED;
-import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.NOT_REQUIRED;
 
 @Getter
 public class ExcelTemplateDefinition {
@@ -76,7 +73,7 @@ public class ExcelTemplateDefinition {
     @Builder
     public static class Column {
         private String header;
-        private RequiredStatus requiredStatus;
+        private RequiredStatus required;
         private String description;
         private String format;
         private String tooltip;
@@ -116,7 +113,7 @@ public class ExcelTemplateDefinition {
         }
 
         public boolean isRequired() {
-            return requiredStatus != null && requiredStatus.isRequired();
+            return required != null && required.isRequired();
         }
     }
 
@@ -129,28 +126,22 @@ public class ExcelTemplateDefinition {
     }
 
     public enum ColumnType {
-        TEXT("TEXT", "@", CellType.STRING),
-        NUMBER("NUMBER", "#,##0.00############", CellType.NUMERIC),
-        DATE("DATE", "dd/mm/yyyy", CellType.NUMERIC),
-        LIST("LIST", "@", CellType.STRING),
-        BOOLEAN("BOOLEAN", "@", CellType.STRING);
+        TEXT("TEXT", "@"),
+        NUMBER("NUMBER", "#,##0.00############"),
+        DATE("DATE", "dd/mm/yyyy"),
+        LIST("LIST", "@"),
+        BOOLEAN("BOOLEAN", "@");
 
         private final String label;
         private final String defaultFormat;
-        private final CellType cellType;
 
-        ColumnType(String label, String defaultFormat, CellType cellType) {
+        ColumnType(String label, String defaultFormat) {
             this.label = label;
             this.defaultFormat = defaultFormat;
-            this.cellType = cellType;
         }
 
         public String defaultFormat() {
             return defaultFormat;
-        }
-
-        public CellType cellType() {
-            return cellType;
         }
     }
 

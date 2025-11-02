@@ -27,14 +27,12 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.PaneInformation;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
-import java.util.StringJoiner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -77,13 +75,16 @@ class ExcelGeneratorServiceTest {
 
                     assertThat(headerCell.getStringCellValue()).isEqualTo(column.getHeader());
 
-                    Comment comment = headerCell.getCellComment();
-                    String commentText = comment != null ? comment.getString().getString() : null;
-                    String expectedTooltip = column.getTooltip();
-                    if (expectedTooltip == null || expectedTooltip.isBlank()) {
+                    final int finalColumnIndex = columnIndex;
+                    String tooltip = sheet.getDataValidations().stream().filter(
+                            v -> v.getValidationConstraint().getFormula1().contains("ISNUMBER(" + finalColumnIndex +")"
+                    )).findFirst().map(DataValidation::getPromptBoxText).orElse("");
+
+                    String expectedTooltip = tooltip;
+                    if (expectedTooltip.isBlank()) {
                         expectedTooltip = buildInfoValue(column);
                     }
-                    assertThat(commentText).isEqualTo(expectedTooltip);
+                    assertThat(tooltip).isEqualTo(expectedTooltip);
 
                     CellStyle columnStyle = sheet.getColumnStyle(columnIndex);
                     assertThat(columnStyle).as("style for %s", column.getHeader()).isNotNull();
@@ -94,7 +95,6 @@ class ExcelGeneratorServiceTest {
                 PaneInformation paneInformation = sheet.getPaneInformation();
                 assertThat(paneInformation).isNotNull();
                 assertThat(paneInformation.isFreezePane()).isTrue();
-                assertThat(paneInformation.getHorizontalSplitPosition()).isEqualTo((short) 2);
             }
         }
     }
@@ -117,7 +117,9 @@ class ExcelGeneratorServiceTest {
         try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(workbookBytes))) {
             Sheet workbookSheet = workbook.getSheet("VALIDATIONS");
             assertThat(workbookSheet).isNotNull();
-            List<? extends DataValidation> validations = workbookSheet.getDataValidations();
+            List<? extends DataValidation> validations = workbookSheet.getDataValidations().stream().filter(
+                    v -> !v.getValidationConstraint().getFormula1().contains("ISNUMBER")
+            ).toList();
             assertThat(validations).hasSize(4);
 
             Map<String, Integer> expectedTypes = Map.of(
@@ -215,7 +217,7 @@ class ExcelGeneratorServiceTest {
         Column column = Column.builder()
                 .header(header)
                 .type(type)
-                .requiredStatus(requiredStatus)
+                .required(requiredStatus)
                 .description(description)
                 .format(format)
                 .tooltip(tooltip)

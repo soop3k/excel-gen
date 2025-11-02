@@ -25,6 +25,7 @@ import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.xssf.usermodel.XSSFDataValidation;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
@@ -41,9 +42,9 @@ public class ExcelGeneratorService {
 
     private static final int HEADER_ROW = 0;
 
-    private static final short HEADER_FILL_COLOR = IndexedColors.BLUE_GREY.getIndex();
+    private static final short HEADER_FILL_COLOR = IndexedColors.GREY_25_PERCENT.getIndex();
     private static final short OPTIONAL_HEADER_FONT_COLOR = IndexedColors.WHITE.getIndex();
-    private static final short REQUIRED_HEADER_FONT_COLOR = IndexedColors.ROSE.getIndex();
+    private static final short REQUIRED_HEADER_FONT_COLOR = IndexedColors.LIGHT_YELLOW.getIndex();
 
     private final ExcelTemplateProperties properties;
 
@@ -108,14 +109,14 @@ public class ExcelGeneratorService {
                                int columnIndex,
                                Column column,
                                DataFormat dataFormat) {
-        Row headerRow = sheet.getRow(HEADER_ROW);
-        
-        createHeaderCell(headerRow, columnIndex, column);
+
 
         applyColumnFormat(sheet, columnIndex, column, sheet.getWorkbook(), dataFormat);
         applyColumnValidation(sheet, sheet.getDataValidationHelper(), columnIndex, column);
-        applyColumnTooltip(sheet.getWorkbook().getCreationHelper(), sheet.createDrawingPatriarch(), columnIndex, 
-                          headerRow.getCell(columnIndex), column);
+        applyColumnTooltip(sheet, columnIndex, column);
+
+        Row headerRow = sheet.getRow(HEADER_ROW);
+        createHeaderCell(headerRow, columnIndex, column);
     }
 
     private void createHeaderCell(Row headerRow, int columnIndex, Column column) {
@@ -137,7 +138,7 @@ public class ExcelGeneratorService {
                     0, columnCount - 1));
         }
 
-        sheet.createFreezePane(0, 2);
+        sheet.createFreezePane(HEADER_ROW, 1);
         autoSizeWithFilterPadding(sheet, 0, columnCount - 1);
     }
 
@@ -149,6 +150,7 @@ public class ExcelGeneratorService {
         String normalizedFormat = column.resolvedFormat();
         CellStyle style = workbook.createCellStyle();
         style.setDataFormat(dataFormat.getFormat(normalizedFormat));
+        style.setLocked(false);
         sheet.setDefaultColumnStyle(columnIndex, style);
     }
 
@@ -192,22 +194,21 @@ public class ExcelGeneratorService {
         sheet.addValidationData(validation);
     }
 
-    private void applyColumnTooltip(CreationHelper creationHelper,
-                                    org.apache.poi.ss.usermodel.Drawing<?> drawing,
+    private void applyColumnTooltip(Sheet sheet,
                                     int columnIndex,
-                                    Cell headerCell,
                                     Column column) {
         String tooltip = resolveColumnTooltip(column);
 
-        ClientAnchor anchor = creationHelper.createClientAnchor();
-        anchor.setCol1(columnIndex);
-        anchor.setCol2(columnIndex + 2);
-        anchor.setRow1(0);
-        anchor.setRow2(2);
+        DataValidationHelper dvHelper = sheet.getDataValidationHelper();
+        DataValidationConstraint dvConstraint = dvHelper.createCustomConstraint("ISNUMBER(" + columnIndex + ")");
 
-        Comment comment = drawing.createCellComment(anchor);
-        comment.setString(creationHelper.createRichTextString(tooltip));
-        headerCell.setCellComment(comment);
+        CellRangeAddressList addressList = new CellRangeAddressList(HEADER_ROW, INITIAL_DATA_ROWS, columnIndex, columnIndex);
+
+        DataValidation validation = dvHelper.createValidation(dvConstraint, addressList);
+        validation.createPromptBox("", tooltip);
+        validation.setShowPromptBox(true);
+
+        sheet.addValidationData(validation);
     }
 
     private String buildInfoCellValue(Column column) {
@@ -232,14 +233,14 @@ public class ExcelGeneratorService {
         font.setColor(required ? REQUIRED_HEADER_FONT_COLOR : OPTIONAL_HEADER_FONT_COLOR);
         style.setFont(font);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
-        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setAlignment(HorizontalAlignment.LEFT);
         style.setLocked(true);
 
         return style;
     }
 
     private  void autoSizeWithFilterPadding(Sheet sheet, int firstCol, int lastCol) {
-        final double FILTER_PADDING_PCT = 1.12;
+        final double FILTER_PADDING_PCT = 1.25;
 
         for (int col = firstCol; col <= lastCol; col++) {
             sheet.autoSizeColumn(col);
