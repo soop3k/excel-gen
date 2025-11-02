@@ -43,7 +43,7 @@ public class ExcelGeneratorService {
 
     private static final short HEADER_FILL_COLOR = IndexedColors.BLUE_GREY.getIndex();
     private static final short OPTIONAL_HEADER_FONT_COLOR = IndexedColors.WHITE.getIndex();
-    private static final short REQUIRED_HEADER_FONT_COLOR = IndexedColors.RED.getIndex();
+    private static final short REQUIRED_HEADER_FONT_COLOR = IndexedColors.ROSE.getIndex();
 
     private final ExcelTemplateProperties properties;
 
@@ -111,11 +111,11 @@ public class ExcelGeneratorService {
         Row headerRow = sheet.getRow(HEADER_ROW);
         
         createHeaderCell(headerRow, columnIndex, column);
+
         applyColumnFormat(sheet, columnIndex, column, sheet.getWorkbook(), dataFormat);
         applyColumnValidation(sheet, sheet.getDataValidationHelper(), columnIndex, column);
         applyColumnTooltip(sheet.getWorkbook().getCreationHelper(), sheet.createDrawingPatriarch(), columnIndex, 
                           headerRow.getCell(columnIndex), column);
-        sheet.autoSizeColumn(columnIndex);
     }
 
     private void createHeaderCell(Row headerRow, int columnIndex, Column column) {
@@ -136,7 +136,9 @@ public class ExcelGeneratorService {
                     HEADER_ROW, HEADER_ROW,
                     0, columnCount - 1));
         }
+
         sheet.createFreezePane(0, 2);
+        autoSizeWithFilterPadding(sheet, 0, columnCount - 1);
     }
 
     private void applyColumnFormat(Sheet sheet,
@@ -234,6 +236,18 @@ public class ExcelGeneratorService {
         style.setLocked(true);
 
         return style;
+    }
+
+    private  void autoSizeWithFilterPadding(Sheet sheet, int firstCol, int lastCol) {
+        final double FILTER_PADDING_PCT = 1.12;
+
+        for (int col = firstCol; col <= lastCol; col++) {
+            sheet.autoSizeColumn(col);
+            int currentWidth = sheet.getColumnWidth(col);
+
+            int newWidth = (int) (currentWidth * FILTER_PADDING_PCT);
+            sheet.setColumnWidth(col, newWidth);
+        }
     }
 
 }

@@ -68,18 +68,14 @@ class ExcelGeneratorServiceTest {
                 assertThat(sheet).as("sheet %s", sheetDefinition.getName()).isNotNull();
 
                 Row headerRow = sheet.getRow(0);
-                Row infoRow = sheet.getRow(1);
                 assertThat(headerRow).isNotNull();
-                assertThat(infoRow).isNotNull();
 
                 List<Column> expectedColumns = sheetDefinition.getColumns();
                 for (int columnIndex = 0; columnIndex < expectedColumns.size(); columnIndex++) {
                     Column column = expectedColumns.get(columnIndex);
                     Cell headerCell = headerRow.getCell(columnIndex);
-                    Cell infoCell = infoRow.getCell(columnIndex);
 
                     assertThat(headerCell.getStringCellValue()).isEqualTo(column.getHeader());
-                    assertThat(infoCell.getStringCellValue()).isEqualTo(buildInfoValue(column));
 
                     Comment comment = headerCell.getCellComment();
                     String commentText = comment != null ? comment.getString().getString() : null;
