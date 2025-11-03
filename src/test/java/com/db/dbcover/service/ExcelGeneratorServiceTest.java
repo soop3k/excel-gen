@@ -1,22 +1,17 @@
 package com.db.dbcover.service;
 
 import com.db.dbcover.config.ExcelTemplateProperties;
+import com.db.dbcover.config.ExcelTemplateProperties;
+import com.db.dbcover.service.sheet.SheetFormatter;
 import com.db.dbcover.template.DefaultExcelTemplates;
 import com.db.dbcover.template.ExcelTemplateDefinition;
 import com.db.dbcover.template.ExcelTemplateDefinition.Column;
 import com.db.dbcover.template.ExcelTemplateDefinition.ColumnType;
 import com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus;
-import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.REQUIRED;
-import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.NOT_REQUIRED;
-import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.BOOLEAN;
-import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.LIST;
-import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.DATE;
-import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.NUMBER;
-import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.TEXT;
 import com.db.dbcover.template.ExcelTemplateDefinition.TemplateSheet;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.Comment;
+import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataValidationConstraint;
 import org.apache.poi.ss.usermodel.DataValidationHelper;
@@ -28,9 +23,9 @@ import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.PaneInformation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +37,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.BOOLEAN;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.DATE;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.LIST;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.NUMBER;
+import static com.db.dbcover.template.ExcelTemplateDefinition.ColumnType.TEXT;
+import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.NOT_REQUIRED;
+import static com.db.dbcover.template.ExcelTemplateDefinition.RequiredStatus.REQUIRED;
 
 class ExcelGeneratorServiceTest {
 
@@ -152,20 +155,14 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
-    void shouldDelegateValidationCreation() throws Exception {
-        Method method = ExcelGeneratorService.class.getDeclaredMethod(
-                "applyColumnValidation",
-                Sheet.class,
-                DataValidationHelper.class,
-                int.class,
-                Column.class
-        );
-        method.setAccessible(true);
-
+    void shouldDelegateValidationCreation() {
         Sheet sheet = mock(Sheet.class);
         DataValidationHelper helper = mock(DataValidationHelper.class);
         DataValidationConstraint constraint = mock(DataValidationConstraint.class);
         DataValidation validation = mock(DataValidation.class);
+        Workbook workbook = mock(Workbook.class);
+        DataFormat dataFormat = mock(DataFormat.class);
+        when(sheet.getDataValidationHelper()).thenReturn(helper);
         when(helper.createExplicitListConstraint(any(String[].class))).thenReturn(constraint);
         when(helper.createValidation(eq(constraint), any(CellRangeAddressList.class))).thenReturn(validation);
 
@@ -175,7 +172,8 @@ class ExcelGeneratorServiceTest {
                 .build();
         listColumn.setAllowedValues(List.of("A", "B"));
 
-        method.invoke(service, sheet, helper, 0, listColumn);
+        SheetFormatter formatter = new SheetFormatter(workbook, dataFormat, 0, 10_000);
+        formatter.applyColumnValidation(sheet, 0, listColumn);
 
         verify(helper).createExplicitListConstraint(any(String[].class));
         verify(helper).createValidation(eq(constraint), any(CellRangeAddressList.class));
@@ -183,25 +181,20 @@ class ExcelGeneratorServiceTest {
     }
 
     @Test
-    void shouldSkipValidationForUnconstrainedTypes() throws Exception {
-        Method method = ExcelGeneratorService.class.getDeclaredMethod(
-                "applyColumnValidation",
-                Sheet.class,
-                DataValidationHelper.class,
-                int.class,
-                Column.class
-        );
-        method.setAccessible(true);
-
+    void shouldSkipValidationForUnconstrainedTypes() {
         Sheet sheet = mock(Sheet.class);
         DataValidationHelper helper = mock(DataValidationHelper.class);
+        when(sheet.getDataValidationHelper()).thenReturn(helper);
+        Workbook workbook = mock(Workbook.class);
+        DataFormat dataFormat = mock(DataFormat.class);
 
         Column textColumn = Column.builder()
                 .header("FREE_TEXT")
                 .type(TEXT)
                 .build();
 
-        method.invoke(service, sheet, helper, 0, textColumn);
+        SheetFormatter formatter = new SheetFormatter(workbook, dataFormat, 0, 10_000);
+        formatter.applyColumnValidation(sheet, 0, textColumn);
 
         verify(helper, never()).createValidation(any(), any());
         verify(sheet, never()).addValidationData(any());
